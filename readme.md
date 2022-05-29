@@ -288,3 +288,7 @@ root@k8s-test-node:/home/packerbuilt/nsx-container-plugin-operator/deploy/kubern
       ......
     }
 ```
+
+The end result is a topology where every namespace has its own T1 router, advertised to T0:
+
+![network-topology.png](images/network-topology.png)
