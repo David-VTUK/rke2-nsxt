@@ -29,7 +29,7 @@ Overlay traffic does not have to be on a routed network
 
 You will need to acquire and upload the ncp container image to a private repo:
 
-![img_4.png](img_4.png)
+![img_4.png](images/img_4.png)
 
 This will contain the NCP image
 
@@ -38,13 +38,13 @@ This will contain the NCP image
 * Create and retrieve the object ID's for:
 * An IP Block for the Pods (this /16 will be divided into /24's in our cluster)
 
-![img_5.png](img_5.png)
+![img_5.png](images/img_5.png)
 
 * An IP Pool for `loadBalancer` service types
 
-![img_6.png](img_6.png)
+![img_6.png](images/img_6.png)
 
-# 2. Create VM
+# 3. Create VM
 
 * Create a VM with one nic attached to the Management network, and one attached to the Overlay network. Note, for ease you can configure NSX-T to provide DHCP services to both
 
@@ -52,7 +52,7 @@ This will contain the NCP image
 
 * Ensure `Python` is Installed (aka Python2)
 
-# 3. Install RKE2
+# 4. Install RKE2
 
 * Create the following configuration file to instruct RKE2 not to auto-apply a CNI:
 
@@ -75,7 +75,7 @@ kubectl get nodes
 
 * You will notice some pods are in `pending` state - this is normal as these reside outside of the host networking namespace and we have yet to install a CNI
 
-# 4. Install additional CNI binaries
+# 5. Install additional CNI binaries
 
 * NSX-T also requires access to thr `portmap` CNI binary. this can be acquired by:
 
@@ -85,28 +85,28 @@ wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni
 
 * Extract the contents to `/opt/cni/bin/`
 
-# 5. Tag the overlay network port on the VM
+# 6. Tag the overlay network port on the VM
 
 The NSX-T container plugin needs to identify the port used for container traffic. In the example above, this is the interface connection to our Overlay switch
 
-![img_1.png](img_1.png)
+![img_1.png](images/img_1.png)
 
 * In NSX-T navigate to `Inventory -> Virtual Machines -> Select the VM`
 * Select the port that's connected to the overlay switch
 
-![img_2.png](img_2.png)
+![img_2.png](images/img_2.png)
 
 * Add the tags as appropiate
 
-![img_3.png](img_3.png)
+![img_3.png](images/img_3.png)
 
 
-# 6. Download the NCP operator files
+# 7. Download the NCP operator files
 
 * `git clone https://github.com/vmware/nsx-container-plugin-operator`
 * Change directory - `cd /deploy/kubernetes/`
 
-# 7. Change the Operator yaml
+# 8. Change the Operator yaml
 
 * `Operator.yaml` - replace where the image resides in your environment. Example:
 
@@ -115,7 +115,7 @@ The NSX-T container plugin needs to identify the port used for container traffic
               value: "core.harbor.virtualthoughts.co.uk/library/nsx-ncp-ubuntu:latest"
 ```
 
-# 8. Change the Configmap yaml file
+# 9. Change the Configmap yaml file
 
 Which values to change will depend on your deployment topology, but as an example:
 
@@ -250,4 +250,41 @@ Which values to change will depend on your deployment topology, but as an exampl
      # service. Information could be retrieved from Tier0 router
 -    #edge_cluster = <None>
 +    edge_cluster = 726530a3-a488-44d5-aea6-7ee21d178fbc
+```
+
+# 10. Apply the manifest files
+
+```shell
+kubectl apply -f /nsx-container-plugin-operator/deploy/kubernetes/*
+```
+
+You should see both the operator and NCP workloads manifest
+
+```shell
+root@k8s-test-node:/home/packerbuilt/nsx-container-plugin-operator/deploy/kubernetes# kubectl get po -n nsx-system
+NAME                       READY   STATUS    RESTARTS   AGE
+nsx-ncp-5666788456-r4nzb   1/1     Running   0          4h31m
+nsx-ncp-bootstrap-6rncw    1/1     Running   0          4h31m
+nsx-node-agent-6rstw       3/3     Running   0          4h31m
+root@k8s-test-node:/home/packerbuilt/nsx-container-plugin-operator/deploy/kubernetes# kubectl get po -n nsx-system-operator
+NAME                               READY   STATUS    RESTARTS   AGE
+nsx-ncp-operator-cbcd844d4-tn4pm   1/1     Running   0          4h31m
+```
+
+Pods should be transitioning to `running` state, and loadbalancer services will be facilitated by NSX
+
+```shell
+root@k8s-test-node:/home/packerbuilt/nsx-container-plugin-operator/deploy/kubernetes# kubectl get svc
+NAME            TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+kubernetes      ClusterIP      10.43.0.1      <none>          443/TCP        4h34m
+nginx-service   LoadBalancer   10.43.234.41   172.16.102.24   80:31848/TCP   107m
+root@k8s-test-node:/home/packerbuilt/nsx-container-plugin-operator/deploy/kubernetes# curl 172.16.102.24
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+      ......
+    }
 ```
