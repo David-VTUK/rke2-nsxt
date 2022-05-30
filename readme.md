@@ -96,7 +96,7 @@ The NSX-T container plugin needs to identify the port used for container traffic
 
 ![img_2.png](images/img_2.png)
 
-* Add the tags as appropiate
+* Add the tags as appropriate
 
 ![img_3.png](images/img_3.png)
 
